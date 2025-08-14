@@ -28,10 +28,14 @@ L:RegisterTranslations("enUS", function() return {
 ["Bottom Right Icon"] = true,
 ["Bottom Icon"] = true,
 ["Bottom Left Icon"] = true,
+["Buff 1 Icon"] = true,
+["Buff 2 Icon"] = true,
+["Buff 3 Icon"] = true,
 ["Left Icon"] = true,
 ["Icon Size"] = true,
 ["Proximity Leeway"] = true,
 ["Use Map Proximity"] = true,
+["Out of Range Alpha"] = true,
 ["Smart Center"] = true,
 ["Show While Solo"] = true,
 ["Show In Party"] = true,
@@ -46,6 +50,7 @@ L:RegisterTranslations("enUS", function() return {
 ["Config Mode"] = true,
 ["Background"] = true,
 ["Show Pets"] = true,
+["Show Pets in Raid"] = true,
 ["Custom Pet Color"] = true,
 ["TBC Shaman Color"] = true,
 ["Proximity Rate"] = true,
@@ -58,6 +63,12 @@ L:RegisterTranslations("enUS", function() return {
 ["Healcomm Text Position"] = true,
 ["Version Checking"] = true,
 ["Draggable"] = true,
+["Show Raid Icon"] = true,
+["Raid Icon Size"] = true,
+["Raid Icon Position"] = true,
+["Show DPS Icon"] = true,
+["Show Tank Icon"] = true,
+["Show Healer Icon"] = true,
 
 ["CombatEvents"] = {
 	["CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS"] = "(%a+) gains %a.+", --%a on the last just to make sure its not a digit
@@ -81,17 +92,20 @@ L:RegisterTranslations("enUS", function() return {
 --------------
 
 ["pet_tooltip"] = "Note: Prone to visual errors.",
+["pet_raid_tooltip"] = "Note: Also prone to visual errors. Not sure how to handle total number of pets as could be 40!",
 ["classcolor_tooltip"] = "Toggle for class color.",
 ["smartcenter_tooltip"] = "As your group expands the frames stay horizontally centered on the original group placement.",
 ["healththreshold_tooltip"] = "Health percentage before name is replaced with health deficit.",
 ["manathreshhold_tooltip"] = "Mana percentage before border color changes.",
 ["proximityleeway_tooltip"] = "Amount of seconds to be considered \"In Range\" after a positive confirmation.",
+["ooralpha_tooltip"] = "Alpha value for raid / party members who are out of range",
 ["proximityrate_tooltip"] = "Amount of seconds between proximity checks.",
 ["cliquehook_tooltip"] = "Hooks the Clique spellcast function to use NG instead for proximity checking beyond 28 yards within instances. Toggling will reload UI.",
 ["powercolor_tooltip"] = "Toggle for power color.",
 ["position_tooltip"] = "Shift+Ctrl = 100\nShift = 10",
 ["draggable_tooltip"] = "Note: Possible client crash bug\n           Smart Center disabled",
 ["icon_tooltip"] = "Toggle to invert icon display.",
+["icon_ooc_tooltip"] = "Will only display out of combat. Toggle to invert icon display.",
 
 
 } end)
