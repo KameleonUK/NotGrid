@@ -145,6 +145,37 @@ local menuarray = {
 
 	{text = "",},
 
+	{text = L["Show Raid Icon"],
+	 toggle = "showraidicon",
+	},
+	{text = L["Raid Icon Size"],
+	 slider = {
+		 key = "raidiconsize",
+		 minval = 1,
+		 maxval = 100,
+	 },
+	},
+	{text = L["Raid Icon Position"],
+	 position = {
+		 xkey = "raidiconoffx",
+		 ykey = "raidiconoffy",
+	 },
+	},
+
+	{text = "",},
+
+	{text = L["Show Tank Icon"],
+	 toggle = "showtankicon",
+	},
+	{text = L["Show Healer Icon"],
+	 toggle = "showhealericon",
+	},
+	{text = L["Show DPS Icon"],
+	 toggle = "showdpsicon",
+	},
+
+	{text = "",},
+
 	{text = L["Show Power Bar"],
 	toggle = "showpowerbar",
 	},
@@ -262,6 +293,36 @@ local menuarray = {
 		},
 	tooltip = L["icon_tooltip"],
 	},
+	{text = L["Buff 1 Icon"],
+	toggle = "trackingicon9invert",
+	editbox = {
+		key = "trackingicon9",
+		},
+	color = {
+		key = "trackingicon9color",
+		},
+	tooltip = L["icon_ooc_tooltip"],
+	},
+	{text = L["Buff 2 Icon"],
+	toggle = "trackingicon10invert",
+	editbox = {
+		key = "trackingicon10",
+		},
+	color = {
+		key = "trackingicon10color",
+		},
+	tooltip = L["icon_ooc_tooltip"],
+	},
+	{text = L["Buff 3 Icon"],
+	toggle = "trackingicon11invert",
+	editbox = {
+		key = "trackingicon11",
+		},
+	color = {
+		key = "trackingicon11color",
+		},
+	tooltip = L["icon_ooc_tooltip"],
+	},
 	-- end of icons --
 	{text = "",},
 
@@ -340,6 +401,15 @@ local menuarray = {
 		},
 	tooltip = L["proximityleeway_tooltip"],
 	},
+	{text = L["Out of Range Alpha"], 
+	slider = {
+		key = "ooralphaa",
+		minval = 0,
+		maxval = 1,
+		stepvalue = 0.1,
+		},
+	tooltip = L["ooralpha_tooltip"],
+	},
 
 	{text = "",},
 
@@ -369,6 +439,10 @@ local menuarray = {
 	{text = L["Show Pets"],
 	toggle = "showpets",
 	tooltip = L["pet_tooltip"],
+	},
+	{text = L["Show Pets in Raid"],
+	toggle = "showpetsinraid",
+	tooltip = L["pet_raid_tooltip"],
 	},
 	{text = L["Custom Pet Color"],
 	toggle = "usepetcolor",
@@ -501,7 +575,6 @@ function NotGrid:InitializeMenu()
 			fb.clr.tex:SetAllPoints()
 			fb.clr:SetPoint("LEFT",fb,"RIGHT",0,0)
 			fb.clr:SetScript("OnClick", function()
-				--DEFAULT_CHAT_FRAME:AddMessage(NotGridOptions[this.color.key][1])
 				self:ClickColor()
 			end)
 		end
@@ -813,7 +886,6 @@ local workingcolorkey
 function NotGrid:ClickColor()
 	workingcolorswatch = this.tex
 	workingcolorkey = this.color.key
-	--DEFAULT_CHAT_FRAME:AddMessage(workingcolorkey.." "..workingcolorswatch:GetName())
 	local r, g, b, a = unpack(NotGridOptions[workingcolorkey])
 	ColorPickerFrame.previousValues = {r, g, b, a}
 	ColorPickerFrame.func = self.ColorPickerHandler
@@ -911,6 +983,7 @@ function NotGridOptionChange()
 	NotGrid:ConfigUnitFrames()
 	for unitid,_ in NotGrid.UnitFrames do
 		NotGrid:UNIT_MAIN(unitid)
+		NotGrid:UNIT_RAID_TARGET(unitid)
 		NotGrid:UNIT_BORDER(unitid)
 		NotGrid:UNIT_AURA(unitid)
 	end
