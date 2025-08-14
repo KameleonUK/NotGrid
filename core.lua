@@ -10,6 +10,8 @@ function NotGrid:OnInitialize()
 	self.Compost = AceLibrary("Compost-2.0")
 	self.UnitFrames = {}
 	--
+	 self.inCombat = false  -- Added this line to track combat state
+	 --
 	self.IdenticalUnits = {} -- will hold pairs of party/player/raidids that are the same effective unit. For use with rosterlib & healcomm stuff
 	--proximity stuff
 	self.ProximityVars = {} -- will hold vars related to proximity handling. Mostly world map stuff
@@ -35,7 +37,6 @@ function NotGrid:OnEnable()
 	end
 	--
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
-	self:RegisterEvent("CHAT_MSG_ADDON")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA","UpdateProximityMapVars")
 	self:RegisterEvent("PARTY_MEMBERS_CHANGED","BlizzFrameHandler")
 	self:RegisterEvent("RAID_ROSTER_UPDATE","BlizzFrameHandler")
@@ -52,6 +53,73 @@ function NotGrid:OnEnable()
 	--Proximity
 	self:RegisterEvent("NG_UNIT_PROXIMITY","UNIT_PROXIMITY")
 	self:ScheduleRepeatingEvent("NG_UNIT_PROXIMITY", self.o.proximityrate)
+	-- Stats changes
+	self:RegisterEvent("UNIT_STATS", "UNIT_MAIN")
+	-- Aura changes (for druid forms)
+	self:RegisterEvent("UNIT_AURA", "UNIT_MAIN")
+   -- Combat state tracking
+    self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEnterCombat")
+    self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnLeaveCombat")
+end
+
+----------------------
+-- CUSTOM FUNCTIONS --
+----------------------
+function NotGrid:UNIT_RAID_TARGET(unitid)
+	local o = self.o
+
+	if not o.showraidicon then return end
+
+	local f = self.UnitFrames[unitid]
+	if o.configmode then
+		unitid = "player"
+	end
+
+	if f and UnitExists(unitid) then
+		local raidIcon = UnitName(unitid) and GetRaidTargetIndex(unitid)
+		if o.configmode then
+			local id = string.sub(f.unit, -1)
+			id = tonumber(id)
+			if not id then id = 1 end
+			if id == 0 then id = 1 end
+			if id > 8 then id = 8 end
+			raidIcon = id
+		end
+		if raidIcon then
+			SetRaidTargetIconTexture(f.raidicon.texture, raidIcon)
+			f.raidicon:Show()
+		else
+			f.raidicon:Hide()
+		end
+	end
+
+end
+
+function NotGrid:OnEnterCombat()
+    self.inCombat = true
+	local f = self.UnitFrames
+    -- Hide buff icons 9, 10, 11 for all units
+    for unitid, frame in pairs(f) do
+        if frame and UnitExists(unitid) then
+            for i = 9, 11 do
+                local f = frame.healthbar["trackingicon"..i]
+                if f then
+                    f:Hide()
+                end
+            end
+        end
+    end
+end
+
+function NotGrid:OnLeaveCombat()
+    self.inCombat = false
+	local f = self.UnitFrames
+    -- Update auras for all units to restore buff icons 9, 10, 11
+    for unitid, frame in pairs(f) do
+        if frame and UnitExists(unitid) then
+            self:UNIT_AURA(unitid)
+        end
+    end
 end
 
 ---------------
@@ -91,7 +159,9 @@ function NotGrid:UNIT_MAIN(unitid)
 		if f.pet and o.usepetcolor then
 			color.r,color.g,color.b = unpack(o.petcolor)
 		elseif class and class == "SHAMAN" and o.useshamancolor then
-			color = {r=0.14,g=0.35,b=1}
+			--color = {r=0.14,g=0.35,b=1}
+			color = {r=0,g=1,b=0.6} -- Monk
+			-- ff00FF98
 		elseif class then
 			color = RAID_CLASS_COLORS[class]
 		else
@@ -114,6 +184,32 @@ function NotGrid:UNIT_MAIN(unitid)
 		f.powerbar:SetStatusBarColor(pcolor.r, pcolor.g, pcolor.b)
 		if o.colorpowerbarbgbytype then
 			f.powerbar.bgtex:SetVertexColor(pcolor.r, pcolor.g, pcolor.b)
+		end
+
+		-- Set role icon
+		local role = self:GetPlayerRole(unitid)
+		if role == "TANK" and o.showtankicon then
+			f.roleIcon.texture:SetTexture("Interface\\AddOns\\NotGrid\\media\\tank2")
+			if self.Banzai:GetUnitAggroByUnitId(unitid) then
+				-- f.roleIcon.border.texture:SetVertexColor(0.8, 0.2, 0.2, 1) -- Red highlight for aggro
+			else
+				-- f.roleIcon.texture:SetVertexColor(0.2, 0.2, 0.2, 1) -- black highlight for no aggro
+			end
+			f.roleIcon:Show()
+		elseif role == "HEALER" and o.showhealericon then
+			f.roleIcon.texture:SetTexture("Interface\\AddOns\\NotGrid\\media\\healer2")
+			if self.Banzai:GetUnitAggroByUnitId(unitid) then
+				f.roleIcon.texture:SetVertexColor(0.8, 0.2, 0.2, 1) -- Red highlight for aggro
+			else
+				f.roleIcon.texture:SetVertexColor(0.2, 0.8, 0.2, 1) -- Green highlight for no aggro
+			end
+			f.roleIcon:Show()
+		elseif role == "DPS" and o.showdpsicon then
+			f.roleIcon.texture:SetTexture("Interface\\AddOns\\NotGrid\\media\\damage2")
+			f.roleIcon:Show()
+			--f.roleIcon:Hide()
+		else
+			f.roleIcon:Hide()
 		end
 
 		if UnitIsConnected(unitid) then
@@ -173,6 +269,13 @@ function NotGrid:UNIT_MAIN(unitid)
 			else
 				f.incheal:SetBackdropColor(0,0,0,0) -- instead of hiding the frame, which is parent to healthtext&inchealtext, I set its opacity to 0
 				f.healcommtext:Hide()
+			end
+
+			if UnitCanAttack("player", unitid) and HasFullControl() then -- Target is mind controlled HasFulLControl ensures that if we're mind controlled all other frames are not shown as MC.
+				--print("Unit is Mind Controlled?")
+				f.mindcontrolled:Show()
+			else
+				f.mindcontrolled:Hide()
 			end
 
 			if self.HealComm:UnitisResurrecting(name) then
@@ -260,24 +363,28 @@ function NotGrid:UNIT_AURA(unitid)
 			di = di + 1;
 		end
 
-		for i=1,8 do
-			local f = f.healthbar["trackingicon"..i]
-			if self:CheckAura(i,auratable) then
-				if self.o["trackingicon"..i.."invert"] then
-					f:Hide()
-				else
-					f:Show()
-				end
-			else
-				if self.o["trackingicon"..i.."invert"] then
-					f:Show()
-				else
-					f:Hide()
-				end
-			end
-		end
-	end
-	self.Compost:Reclaim(auratable)
+        for i=1,11 do -- Changed from 8 to 11 as we've added Buff Icon 1,2 and 3 (9th, 10th, 11th Icon)
+            local f = f.healthbar["trackingicon"..i]
+            
+            -- Hide icons 9, 10, 11 during combat
+            if self.inCombat and (i == 9 or i == 10 or i == 11) then
+                f:Hide()
+            elseif self:CheckAura(i,auratable) then
+                if self.o["trackingicon"..i.."invert"] then
+                    f:Hide()
+                else
+                    f:Show()
+                end
+            else
+                if self.o["trackingicon"..i.."invert"] then
+                    f:Show()
+                else
+                    f:Hide()
+                end
+            end
+        end
+    end
+    self.Compost:Reclaim(auratable)
 end
 
 function NotGrid:CheckAura(i, auratable)
@@ -320,6 +427,55 @@ end
 -- On Unit Click --
 -------------------
 
+local _, playerClass = UnitClass("player")
+local has_unitxp = pcall(UnitXP, "inSight", "player", "player")
+local has_pepo_nam = pcall(GetCVar, "NP_QueueCastTimeSpells")
+
+local hasUnitBuff = function(unit)
+	local i = 1
+	local hasRejuv = false
+	local hasRegrowth = false
+	local hasCurse = false
+	local hasPoison = false
+	local hasAbolish = false
+	while true do
+		NotGrid.Gratuity:SetUnitBuff(unit, i)
+		local buffName = NotGrid.Gratuity:GetLine(1, false)
+		local buffType = NotGrid.Gratuity:GetLine(1, true)
+		if not buffName then
+			break
+		end
+
+		if string.find(buffName, 'Rejuvenation') then
+			hasRejuv = true
+		elseif string.find(buffName, 'Regrowth') then
+			hasRegrowth = true
+		elseif string.find(buffName, 'Abolish Poison') then
+			hasAbolish = true
+		end
+
+		if buffType == 'Curse' then
+			hasCurse = true
+		elseif buffType == 'Poison' then
+			hasPoison = true
+		end
+
+		if buffName and string.find(buffName, name) then
+			return true
+		end
+		i = i + 1
+	end
+	return hasRejuv, hasRegrowth, hasAbolish, hasCurse, hasPoison
+end
+
+local castSpell = function(spell, unit)
+	if has_pepo_nam then
+		QueueSpellByName(spell, unit)
+	else
+		CastSpellByName(spell, unit)
+	end
+end
+
 function NotGrid:ClickHandle(button)
 	if button == "RightButton" and SpellIsTargeting() then
 		SpellStopTargeting()
@@ -333,14 +489,18 @@ function NotGrid:ClickHandle(button)
 		else
 			TargetUnit(this.unit)
 		end
-	else --Thanks Luna :^)
-		local name = UnitName(this.unit)
-		local id = string.sub(this.unit,5)
-		local unit = this.unit
-		local menuFrame = FriendsDropDown
-		menuFrame.displayMode = "MENU"
-		menuFrame.initialize = function() UnitPopup_ShowMenu(getglobal(UIDROPDOWNMENU_OPEN_MENU), "PARTY", unit, name, id) end
-		ToggleDropDownMenu(1, nil, FriendsDropDown, "cursor")
+	elseif button == "RightButton" then
+		if IsControlKeyDown() then
+			ToggleFriendsFrame(4) -- Открываем окно рейда (4 - это индекс для рейда)
+		else
+			local name = UnitName(this.unit)
+			local id = string.sub(this.unit,5)
+			local unit = this.unit
+			local menuFrame = FriendsDropDown
+			menuFrame.displayMode = "MENU"
+			menuFrame.initialize = function() UnitPopup_ShowMenu(getglobal(UIDROPDOWNMENU_OPEN_MENU), "PARTY", unit, name, id) end
+			ToggleDropDownMenu(1, nil, FriendsDropDown, "cursor")
+		end
 	end
 end
 
@@ -401,11 +561,33 @@ end
 
 -- Healcomm
 
-function NotGrid:HealCommHandler(name) -- be nice if it sent us the unitid instead
-	local unitid = self.RosterLib:GetUnitIDFromName(name)
-	self:UNIT_MAIN(unitid)
-	if self.IdenticalUnits[unitid] then
-		self:UNIT_MAIN(self.IdenticalUnits[unitid])
+function NotGrid:HealCommHandler(name)
+	-- Find unitid for the name
+	local unitid
+	if name == UnitName("player") then
+		unitid = "player"
+	else
+		for i=1,40 do
+			if UnitExists("raid"..i) and UnitName("raid"..i) == name then
+				unitid = "raid"..i
+				break
+			end
+		end
+		if not unitid then
+			for i=1,4 do
+				if UnitExists("party"..i) and UnitName("party"..i) == name then
+					unitid = "party"..i
+					break
+				end
+			end
+		end
+	end
+	
+	if unitid then
+		self:UNIT_MAIN(unitid)
+		if self.IdenticalUnits[unitid] then
+			self:UNIT_MAIN(self.IdenticalUnits[unitid])
+		end
 	end
 end
 
@@ -459,10 +641,12 @@ function NotGrid:RosterLib_UnitChanged(unitid, name, class, subgroup, rank, oldn
 		self:UNIT_MAIN(unitid)
 		self:UNIT_BORDER(unitid)
 		self:UNIT_AURA(unitid)
+		self:UNIT_RAID_TARGET(unitid)
 		if self.IdenticalUnits[unitid] then
 			self:UNIT_MAIN(self.IdenticalUnits[unitid])
 			self:UNIT_BORDER(self.IdenticalUnits[unitid])
 			self:UNIT_AURA(self.IdenticalUnits[unitid])
+			self:UNIT_RAID_TARGET(self.IdenticalUnits[unitid])
 		end
 	end
 end
@@ -482,16 +666,17 @@ function NotGrid:PLAYER_ENTERING_WORLD() -- when they login,reloadui,or zone in/
 	end
 	self:UpdateProximityMapVars() -- zoning into an instance won't trigger a zonechange event if the outdoors name is the same name as the indoors. This ensures the vars update.
 	self:BlizzFrameHandler()
-end
-
-function NotGrid:CHAT_MSG_ADDON()
-	if arg1 == "NotGrid" and self.o.versionchecking then
-		if tonumber(arg2) > self.o.version and not self.versionalreadyshown then
-			DEFAULT_CHAT_FRAME:AddMessage("|cff0ccca6NotGrid:|r A newer version may be available.")
-			self.versionalreadyshown = true
+	
+	-- Update all raid units
+	if GetNumRaidMembers() > 0 then
+		for i=1,40 do
+			if UnitExists("raid"..i) then
+				self:UNIT_MAIN("raid"..i)
+			end
 		end
 	end
 end
+
 
 --have to handle the blizzframes seperately because rosterlib only fires if a member changed, wheras PARTY_MEMBERS_CHANGED fires for loot and other reasons as well
 function NotGrid:BlizzFrameHandler() -- called by PLAYER_ENTERING_WORLD,PARTY_MEMBER_CHANGED,RAID_ROSTER_UPDATE,UNIT_PET,and NotGridOptionChange()
@@ -502,4 +687,64 @@ function NotGrid:BlizzFrameHandler() -- called by PLAYER_ENTERING_WORLD,PARTY_ME
 			getglobal("PartyMemberFrame"..i):Hide();
 		end
 	end
+end
+
+function NotGrid:GetPlayerRole(unitId)
+	local role = "DPS" -- Default role
+	local _, unitClass = UnitClass(unitId)
+	local name = UnitName(unitId)
+	
+	-- Check if warrior/paladin has aggro or druid is in bear form with aggro
+	if ((unitClass == "WARRIOR" or unitClass == "PALADIN") and self.Banzai:GetUnitAggroByUnitId(unitId)) or
+	   (unitClass == "DRUID" and self:HasBuff(unitId, "Dire Bear Form") and self.Banzai:GetUnitAggroByUnitId(unitId)) then
+		role = "TANK"
+	-- Check if player is healing
+	else
+		local isHealing = false
+		
+		-- Check single target heals
+		for target, healers in pairs(self.HealComm.Heals) do
+			for healer, info in pairs(healers) do
+				if healer == name then
+					isHealing = true
+					break
+				end
+			end
+			if isHealing then break end
+		end
+		
+		-- Check group heals
+		if not isHealing then
+			for caster, healInfo in pairs(self.HealComm.GrpHeals) do
+				if caster == name and healInfo.ctime and healInfo.ctime > GetTime() then
+					isHealing = true
+					break
+				end
+			end
+		end
+		
+		if isHealing then
+			role = "HEALER"
+		end
+	end
+	
+	return role
+end
+
+function NotGrid:HasBuff(unitId, buffName)
+	local i = 1
+	while true do
+		if not UnitBuff(unitId, i) then break end
+		
+		self.Gratuity:SetUnitBuff(unitId, i)
+		local buff = self.Gratuity:GetLine(1)
+		if not buff then break end
+		
+		if buff == buffName then
+			return true
+		end
+		
+		i = i + 1
+	end
+	return false
 end
