@@ -15,7 +15,8 @@ local DefaultOptions = {
 	["unithealthbarcolor"] = {39/255,186/255,42/255,1},
 	["unithealthbarbgcolor"] = {0,0,0,0.1},
 	["unithealthbarbgtexture"] = "Interface\\Buttons\\WHITE8X8",
-	["unitfont"] = "Fonts\\ARIALN.TTF",
+	-- ["unitfont"] = "Fonts\\ARIALN.TTF",
+	["unitfont"] = "Fonts\\custom\\RobotoCondensed-Regular.ttf",
 	["unitnamehealthtextcolor"] = {1,1,1,1},
 	["unitnamehealthtextsize"] = 12,
 	["unithealcommbarcolor"] = {32/255,112/255,11/255,1},
@@ -26,6 +27,16 @@ local DefaultOptions = {
 	["unittrackingiconsize"] = 6,
 	["unittrackingiconborder"] = 1,
 	["unittrackingiconbordercolor"] = {0,0,0,1},
+	["unitnumberfont"] = "Fonts\\custom\\SF-Pro-Display-Medium.ttf",
+
+	["showraidicon"] = true,
+	["raidiconsize"] = 10,
+	["raidiconoffx"] = 0,
+	["raidiconoffy"] = 10,
+
+	["showtankicon"] = true,
+	["showhealericon"] = true,
+	["showdpsicon"] = false,
 
 	["showpowerbar"] = false,
 	["powersize"] = 3, -- this will be width if the player chooses to make it Verical, or height if they make it Horizontal
@@ -57,6 +68,15 @@ local DefaultOptions = {
 	["trackingicon8"] = {"",},
 	["trackingicon8invert"] = false,
 	["trackingicon8color"] = {0.20,0.60,1.00},
+	["trackingicon9"] = {"Prayer of Fortitude","Power Word: Fortitude",}, -- BUFF TRACKER ICON 1 (OUT OF COMBAT ONLY)
+	["trackingicon9invert"] = false,
+	["trackingicon9color"] = {0.60,0.80,1.00}, -- Blue
+	["trackingicon10"] = {"Shadow Protection","Prayer of Shadow Protection",}, -- BUFF TRACKER ICON 3 (OUT OF COMBAT ONLY)
+	["trackingicon10invert"] = false,
+	["trackingicon10color"] = {1.00,0.20,1.00}, -- magenta
+	["trackingicon11"] = {"Divine Spirit","Prayer of Spirit",}, -- BUFF TRACKER ICON 2 (OUT OF COMBAT ONLY)
+	["trackingicon11invert"] = false,
+	["trackingicon11color"] = {1.0,1.00,1.00}, -- white
 
 	["trackaggro"] = true,
 	["aggrowarningcolor"] = {150/255,10/255,10/255,0.8},
@@ -78,7 +98,7 @@ local DefaultOptions = {
 	["manathreshhold"] = 20,
 	["namelength"] = 3,
 
-	["ooralpha"] = 0.5,
+	["ooralpha"] = 0.10,
 
 	["useproximity"] = true,
 	["proximityrate"] = 1,
@@ -101,6 +121,7 @@ local DefaultOptions = {
 	["showinparty"] = true,
 	["showpartyinraid"] = false,
 	["showpets"] = false,
+	["showpetsinraid"] = false,
 	["showblizzframes"] = true,
 
 	["growthdirection"] = 1, -- 1: Group Left to Right, 2: Group Right to Left, 3: Group Top to Bottom, 4: Group Bottom to Top, 5: Unit Top to Bottom.. etc
