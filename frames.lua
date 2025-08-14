@@ -4,7 +4,7 @@
 
 function NotGrid:CreateFrames()
 	self.Container = self:CreateContainerFrame()
-	for i=1,40 do
+	for i=1,40 do 
 		self.UnitFrames["raid"..i] = self:CreateUnitFrame("raid"..i,i)
 	end
 	for i=1,4 do
@@ -38,6 +38,27 @@ function NotGrid:CreateUnitFrame(unitid,raidindex)
 		f.pet = true -- so I have a boolean to check against
 	end
 
+	-- Add background role icon
+	f.roleIcon = CreateFrame("Frame", nil, f)
+	f.roleIcon:SetWidth(20)
+	f.roleIcon:SetHeight(20)
+	f.roleIcon:SetPoint("TOPRIGHT", f, "TOPRIGHT", 5, 5)
+	f.roleIcon:SetFrameLevel(f:GetFrameLevel() + 3)
+	
+	-- -- Add black circular border texture
+	-- f.roleIcon.border = f.roleIcon:CreateTexture(nil, "BACKGROUND")
+	-- f.roleIcon.border:SetTexture("Interface\\AddOns\\NotGrid\\media\\tank2")
+	-- f.roleIcon.border:SetVertexColor(0, 0, 0, 1)
+	-- f.roleIcon.border:SetWidth(22)  -- 4 pixels larger than the icon
+	-- f.roleIcon.border:SetHeight(22) -- 4 pixels larger than the icon
+	-- f.roleIcon.border:SetPoint("CENTER", f.roleIcon, "CENTER", 0, 0)
+	-- f.roleIcon.border:SetAlpha(0.65)
+	
+	f.roleIcon.texture = f.roleIcon:CreateTexture(nil, "OVERLAY")
+	f.roleIcon.texture:SetAllPoints()
+	f.roleIcon.texture:SetAlpha(0.85)
+	f.roleIcon:Hide()
+
 	f.border = CreateFrame("Frame","$parentborder",f) -- make a seperate frame for the edgefile/border for better customization possibilities
 	f.border.middleart = f.border:CreateTexture("NGArtworkMiddle", "ARTWORK")
 
@@ -47,18 +68,32 @@ function NotGrid:CreateUnitFrame(unitid,raidindex)
 	f.powerbar = CreateFrame("StatusBar","$parenthealthbar",f)
 	f.powerbar.bgtex = f.powerbar:CreateTexture("$parentbgtex","BACKGROUND")
 
+	f.mindcontrolled = CreateFrame("Frame","$parentresicon",f.healthbar)
+	f.mindcontrolled.bgtex = f.mindcontrolled:CreateTexture("$parentbgtex","BACKGROUND")
+
 	f.incres = CreateFrame("Frame","$parentresicon",f.healthbar)
 	f.incres.bgtex = f.incres:CreateTexture("$parentbgtex","BACKGROUND")
 
 	f.incheal = CreateFrame("Frame","$parenthealcommbar",f.healthbar) -- Was using a statusbar behind the health frame but when the frame's alpha is low this would be seen through it
 	
 	-- I was having problems with incheal covering up these fontstrings. My soluction is to parent them to the incheal, but set the relative point to the healthbar. And instead of hide/show the incheal I just lower/higher its color opacity
-	f.namehealthtext = f.incheal:CreateFontString("$parentnamehealthtext", "OVERLAY")
+	f.namehealthtext = f.incheal:CreateFontString("$parentnamehealthtext", "ARTWORK")
 	f.healcommtext = f.incheal:CreateFontString("$parenthealcommtext", "OVERLAY")
 
-	for i=1,8 do
-		f.healthbar["trackingicon"..i] = CreateFrame("Frame","$parenttrackingicon"..i,f.healthbar) -- easier to work with digits than topleft/topright/etc..
+	-- EDIT I VALUE TO REPRESENT TOTAL NUMBER OF RAID FRAME ICONS
+	for i=1,11 do -- changed from 8 to 11 to accomodate Buff Icon 1,2,3
+				f.healthbar["trackingicon"..i] = CreateFrame("Frame","$parenttrackingicon"..i,f.healthbar) -- easier to work with digits than topleft/topright/etc..
+				f.healthbar["trackingicon"..i]:SetFrameLevel(f.namehealthtext:GetParent():GetFrameLevel() + 1)
+				f.healthbar["trackingicon"..i]:SetFrameStrata("MEDIUM")
+				-- Adding spell icon texture
+				f.healthbar["trackingicon"..i].spellicon = f.healthbar["trackingicon"..i]:CreateTexture("$parentspellicon", "BACKGROUND")
+				f.healthbar["trackingicon"..i].spellicon:SetAllPoints()
+				f.healthbar["trackingicon"..i].spellicon:SetAlpha(0.3) -- Translucancy for icon background
 	end
+
+	f.raidicon = CreateFrame("Frame", nil, f.healthbar)
+	f.raidicon.texture = f.raidicon:CreateTexture(nil,"OVERLAY")
+
 	--scripts and stuff
 	f:RegisterForClicks("LeftButtonDown", "RightButtonDown", "MiddleButtonDown", "Button4Down", "Button5Down") -- somehow I recall this not matterign?
 	f:RegisterForDrag("LeftButton")
@@ -118,6 +153,9 @@ function NotGrid:CreateUnitFrame(unitid,raidindex)
 	f:RegisterEvent("PLAYER_TARGET_CHANGED")
 	--banzai/healcomm are registered in core on enable
 
+	--used for update raid icon
+	f:RegisterEvent("RAID_TARGET_UPDATE")
+
 	f:SetScript("OnEvent", function()
 		if arg1 and arg1 == this.unit then -- if an event has coniditions specific to a unit, then only specified unit will update
 			if event == "UNIT_AURA" then
@@ -126,6 +164,8 @@ function NotGrid:CreateUnitFrame(unitid,raidindex)
 				self:UNIT_MAIN(this.unit)
 				self:UNIT_BORDER(this.unit)
 			end
+		elseif event == "RAID_TARGET_UPDATE" then
+				self:UNIT_RAID_TARGET(this.unit)
 		elseif event == "PLAYER_TARGET_CHANGED" then -- all units will update their border
 			self:UNIT_BORDER(this.unit)
 		end
@@ -193,6 +233,16 @@ function NotGrid:ConfigUnitFrames() -- this can get called on every setting chan
 		f.healthbar.bgtex:SetVertexColor(unpack(o.unithealthbarbgcolor))
 		f.healthbar.bgtex:SetAllPoints()
 
+
+		-- raid target icon
+		f.raidicon:SetWidth(o.raidiconsize)
+		f.raidicon:SetHeight(o.raidiconsize)
+		f.raidicon:SetPoint("CENTER", f.healthbar, "CENTER", o.raidiconoffx, o.raidiconoffy)
+		f.raidicon.texture:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+		f.raidicon.texture:SetAllPoints(f.raidicon)
+		f.raidicon:Hide()
+
+
 		--position health and powerbar
 		f.healthbar:ClearAllPoints()
 		f.powerbar:ClearAllPoints()
@@ -253,6 +303,14 @@ function NotGrid:ConfigUnitFrames() -- this can get called on every setting chan
 		f.incres.bgtex:SetTexture("Interface\\AddOns\\NotGrid\\media\\res")
 		f.incres.bgtex:SetAllPoints()
 		f.incres:Hide()
+		
+		f.mindcontrolled:SetWidth(o.unitheight) -- yep, so it stays square under most common sizes. Think of a mathematical way in the future
+		f.mindcontrolled:SetHeight(o.unitheight)
+		f.mindcontrolled:ClearAllPoints()
+		f.mindcontrolled:SetPoint("CENTER",0,0)
+		f.mindcontrolled.bgtex:SetTexture("Interface\\AddOns\\NotGrid\\media\\mc")
+		f.mindcontrolled.bgtex:SetAllPoints()
+		f.mindcontrolled:Hide()
 
 		f.incheal:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", tile = true, tileSize = 16, edgeSize = 1, insets = { left = 0, right = 0, top = 0, bottom = 0 }})
 		f.incheal:SetBackdropColor(0,0,0,0)
@@ -280,7 +338,7 @@ function NotGrid:ConfigUnitFrames() -- this can get called on every setting chan
 				end
 			end
 		end
-		for i,point in {"TOPLEFT", "TOP", "TOPRIGHT", "RIGHT", "BOTTOMRIGHT", "BOTTOM", "BOTTOMLEFT", "LEFT"} do
+		for i,point in {"TOPLEFT", "TOP", "TOPRIGHT", "RIGHT", "BOTTOMRIGHT", "BOTTOM", "BOTTOMLEFT", "LEFT", "BOTTOM", "BOTTOM", "BOTTOM"} do
 			local fi = f.healthbar["trackingicon"..i]
 			fi:SetWidth(o.unittrackingiconsize)
 			fi:SetHeight(o.unittrackingiconsize)
@@ -288,7 +346,19 @@ function NotGrid:ConfigUnitFrames() -- this can get called on every setting chan
 			fi:SetBackdropBorderColor(o.unittrackingiconbordercolor)
 			fi:SetBackdropColor(unpack(o["trackingicon"..i.."color"]))
 			fi:ClearAllPoints()
-			fi:SetPoint(point,0,0)
+			-- If tracking icon is Buff Icon 1, use the 9th position from the array (BOTTOM) and move it 10 pixels left on the X axis
+			if i == 9 then
+				-- this should be changed from -10 (static) to a dynamic value that represents the chosen icon size		
+				fi:SetPoint(point,-10,0)
+			elseif i == 10 then
+				-- this should be changed from -10 (static) to a dynamic value that represents the chosen icon size		
+				fi:SetPoint(point,0,0)
+			elseif i == 11 then
+				-- this should be changed from -10 (static) to a dynamic value that represents the chosen icon size		
+				fi:SetPoint(point,10,0)	
+			else
+				fi:SetPoint(point,0,0)
+			end
 			fi:Hide()
 		end
 	end
@@ -333,6 +403,8 @@ function NotGrid:PositionFrames()
 					subgroup = 9
 				elseif (string.find(f.unit,"partypet%d") or (f.unit == "pet")) and ((raidcount > 0 and o.showpartyinraid and o.showpets) or (raidcount == 0 and partycount > 0 and o.showinparty and o.showpets and not o.configmode) or (raidcount == 0 and partycount == 0 and o.showwhilesolo and o.showpets and not o.configmode) or (o.configmode and o.showpartyinraid and o.showpets)) then
 					subgroup = 10
+				elseif (string.find(f.unit,"partypet%d") or (f.unit == "pet")) and ((raidcount > 0 and o.showpetsinraid) or (o.configmode and o.showpetsinraid)) then
+					subgroup = 10
 				else
 					f:Hide() -- I won't set a subgroup so it will fail the next check, wont position, and won't get counted into subgroup/totalgroups
 				end
@@ -368,7 +440,6 @@ function NotGrid:PositionFrames()
 					f:Show()
 					TotalUnits = TotalUnits+1
 					SubGroupCounts[i] = SubGroupCounts[i]+1
-					--DEFAULT_CHAT_FRAME:AddMessage(f.unit .. " positioned")
 				end
 			else
 				f:Hide()
