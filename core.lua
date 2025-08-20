@@ -271,10 +271,17 @@ function NotGrid:UNIT_MAIN(unitid)
 				f.healcommtext:Hide()
 			end
 
-			if UnitCanAttack("player", unitid) and HasFullControl() then -- Target is mind controlled HasFulLControl ensures that if we're mind controlled all other frames are not shown as MC.
+			if UnitIsCharmed(unitid) then
+			--if UnitCanAttack("player", unitid) and HasFullControl() then -- Target is mind controlled HasFulLControl ensures that if we're mind controlled all other frames are not shown as MC.
 				--print("Unit is Mind Controlled?")
+				if o.colorunithealthbarbyclass then
+					f.healthbar:SetStatusBarColor(0.64, 0.19, 0.79, o.unithealthbarcolor[4])
+				end
 				f.mindcontrolled:Show()
 			else
+				if o.colorunithealthbarbyclass then
+					f.healthbar:SetStatusBarColor(color.r, color.g, color.b, o.unithealthbarcolor[4])
+				end
 				f.mindcontrolled:Hide()
 			end
 
